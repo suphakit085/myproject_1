@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `orders` ADD COLUMN `totalCustomerCount` INTEGER NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE `tables` MODIFY `tabCreatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
