@@ -47,10 +47,14 @@ export async function GET() {
         },
         buffetType: {
           select: {
+            buffetTypeID: true,
             buffetTypesName: true, 
           },
         },
       },
+      orderBy: {
+        orderID: 'desc',
+      }
     });
     
     return new Response(JSON.stringify(orders), { status: 200 });

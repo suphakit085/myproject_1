@@ -60,6 +60,7 @@ model Orders {
   orderCreatedAt           DateTime      @default(now())
   totalCustomerCount       Int           @default(0)
   qrCode                   String?       // เก็บ URL เช่น http://localhost:3000/user/menu/[orderItemId]
+  isDeleted      Boolean   @default(false)
   table                    Tables        @relation(fields: [Tables_tabID], references: [tabID])
   employee                 Employee      @relation(fields: [Employee_empID], references: [empID])
   buffetType               BuffetTypes   @relation(fields: [BuffetTypes_buffetTypeID], references: [buffetTypeID])

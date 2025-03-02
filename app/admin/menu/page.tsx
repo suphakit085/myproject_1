@@ -35,12 +35,9 @@ export default function AdminMenuPage() {
   const [filter, setFilter] = useState<string>('PENDING');
   const [refreshInterval, setRefreshInterval] = useState<number | null>(null);
 
-  // ดึงรายการอาหารทั้งหมดที่ยังไม่ได้เสิร์ฟ
+  // ดึงรายการอาหารทั้งหมด
   const fetchOrderItems = async () => {
     try {
-      // ในสถานการณ์จริง คุณอาจจะต้องมี API เฉพาะสำหรับดึงข้อมูลรายการอาหารที่ยังไม่ได้เสิร์ฟ
-      // แต่ในตัวอย่างนี้ เราจะดึงข้อมูลทั้งหมดมาก่อนแล้วค่อยกรองทีหลัง
-      
       const response = await fetch('/api/admin/order-menu');
       if (!response.ok) throw new Error(`Error: ${response.status}`);
       const data: OrderItem[] = await response.json();
@@ -88,7 +85,6 @@ export default function AdminMenuPage() {
   const getThaiMenuStatus = (status: string): string => {
     switch (status) {
       case 'PENDING': return 'รอดำเนินการ';
-      case 'COOKING': return 'กำลังปรุง';
       case 'SERVED': return 'เสิร์ฟแล้ว';
       case 'CANCELLED': return 'ยกเลิกแล้ว';
       default: return status;
@@ -99,7 +95,6 @@ export default function AdminMenuPage() {
   const getStatusColor = (status: string): string => {
     switch (status) {
       case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-      case 'COOKING': return 'bg-blue-100 text-blue-800';
       case 'SERVED': return 'bg-green-100 text-green-800';
       case 'CANCELLED': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -127,7 +122,7 @@ export default function AdminMenuPage() {
         item.id === id ? {...item, menuStatus: newStatus} : item
       ));
       
-      // แสดงข้อความสำเร็จ (ในสถานการณ์จริงอาจใช้ toast notification)
+      // แสดงข้อความสำเร็จ
       alert(`อัปเดตสถานะเมนู ${updatedItem.menuItem.menuItemNameTHA} เป็น ${getThaiMenuStatus(newStatus)} เรียบร้อยแล้ว`);
     } catch (err) {
       console.error('เกิดข้อผิดพลาดในการอัปเดตสถานะ:', err);
@@ -196,12 +191,6 @@ export default function AdminMenuPage() {
             รอดำเนินการ
           </button>
           <button
-            onClick={() => setFilter('COOKING')}
-            className={`rounded-md px-4 py-2 ${filter === 'COOKING' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800'}`}
-          >
-            กำลังปรุง
-          </button>
-          <button
             onClick={() => setFilter('SERVED')}
             className={`rounded-md px-4 py-2 ${filter === 'SERVED' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800'}`}
           >
@@ -254,21 +243,13 @@ export default function AdminMenuPage() {
                     <div className="flex space-x-2">
                       {item.menuStatus === 'PENDING' && (
                         <button
-                          onClick={() => updateMenuStatus(item.id, 'COOKING')}
-                          className="text-blue-600 hover:text-blue-900 bg-blue-100 px-2 py-1 rounded"
-                        >
-                          เริ่มปรุง
-                        </button>
-                      )}
-                      {item.menuStatus === 'COOKING' && (
-                        <button
                           onClick={() => updateMenuStatus(item.id, 'SERVED')}
                           className="text-green-600 hover:text-green-900 bg-green-100 px-2 py-1 rounded"
                         >
                           เสิร์ฟแล้ว
                         </button>
                       )}
-                      {(item.menuStatus === 'PENDING' || item.menuStatus === 'COOKING') && (
+                      {item.menuStatus === 'PENDING' && (
                         <button
                           onClick={() => updateMenuStatus(item.id, 'CANCELLED')}
                           className="text-red-600 hover:text-red-900 bg-red-100 px-2 py-1 rounded"
