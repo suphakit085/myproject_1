@@ -1,32 +1,98 @@
-// app/api/orders/[id]/restore/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-interface Params {
-  id: string;
+interface RequestParams {
+  params: {
+    id: string;
+  };
 }
 
-export async function PUT(req: Request, { params }: { params: Params }) {
+export async function PUT(request: NextRequest, { params }: RequestParams) {
   try {
-    const orderId = parseInt(params.id, 10);
+    const { id } = params;
+    let body;
 
-    if (isNaN(orderId)) {
-      return NextResponse.json({ error: 'Invalid Order ID' }, { status: 400 });
+    try {
+      body = await request.json();
+    } catch (error) {
+      body = { isDeleted: false };
     }
 
-    // คืนค่าสถานะ isDeleted เป็น false เพื่อกู้คืนรายการ
-    await prisma.orders.update({
+    const isDeleted = body?.isDeleted ?? false;
+
+    // ดึงข้อมูลออร์เดอร์เพื่อตรวจสอบโต๊ะ
+    const order = await prisma.orders.findUnique({
       where: {
-        orderID: orderId,
+        orderID: parseInt(id),
       },
-      data: {
-        isDeleted: false,
+      select: {
+        Tables_tabID: true,
+        orderStatus: true, // เพิ่มการดึง orderStatus
+        qrCode: true, // เพิ่มการดึง qrCode
       },
     });
 
-    return NextResponse.json({ message: 'Order restored successfully' }, { status: 200 });
+    if (!order) {
+      return NextResponse.json(
+        { error: 'Order not found' },
+        { status: 404 }
+      );
+    }
+
+    // เพิ่มเงื่อนไขการตรวจสอบสถานะก่อนคืนสถานะ
+    if (order.orderStatus === 'COMPLETED' || order.orderStatus === 'CANCELLED') {
+      return NextResponse.json(
+        { 
+          error: 'Cannot restore completed or cancelled order',
+          message: 'ไม่สามารถกู้คืนออเดอร์ที่ปิดหรือยกเลิกแล้วได้'
+        },
+        { status: 400 }
+      );
+    }
+
+    // ตรวจสอบว่าโต๊ะว่างหรือไม่
+    const table = await prisma.tables.findUnique({
+      where: {
+        tabID: order.Tables_tabID,
+      },
+    });
+
+    if (!table || table.tabStatus !== 'AVAILABLE') {
+      return NextResponse.json(
+        { error: 'Cannot restore order: table is not available' },
+        { status: 400 }
+      );
+    }
+
+    // อัปเดตสถานะโต๊ะ
+    await prisma.tables.update({
+      where: {
+        tabID: order.Tables_tabID,
+      },
+      data: {
+        tabStatus: 'RESERVED',
+      },
+    });
+
+    // คืนสถานะออร์เดอร์
+    const updatedOrder = await prisma.orders.update({
+      where: {
+        orderID: parseInt(id),
+      },
+      data: {
+        isDeleted: isDeleted,
+        orderStatus: 'PENDING', // รีเซ็ตสถานะเป็น pending เมื่อคืนสถานะ
+        // เพิ่มการ generate QR code ใหม่หากต้องการ
+        // qrCode: generateNewQRCode() // ฟังก์ชันสร้าง QR code ใหม่
+      },
+    });
+
+    return NextResponse.json(updatedOrder);
   } catch (error) {
-    console.error("Failed to restore order:", error);
-    return NextResponse.json({ error: 'Failed to restore order' }, { status: 500 });
+    console.error('Failed to restore order:', error);
+    return NextResponse.json(
+      { error: 'Failed to process the request' },
+      { status: 500 }
+    );
   }
 }

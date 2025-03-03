@@ -1,3 +1,4 @@
+//ไม่ได้ใช้งาน
 'use client';
 
 import { useState, useEffect } from 'react';

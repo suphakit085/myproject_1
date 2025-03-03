@@ -91,9 +91,9 @@ const Navbar: React.FC = () => {
                   </button>
                   <div className="absolute left-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left">
                     <Link 
-                      href="/admin/orders" 
+                      href="/admin/orders-manage" 
                       className={`block px-3 py-1.5 text-xs ${
-                        isActive('/admin/orders') 
+                        isActive('/admin/orders-manage') 
                           ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300' 
                           : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'
                       }`}
@@ -222,9 +222,9 @@ const Navbar: React.FC = () => {
           <div className="border-t border-gray-200 dark:border-gray-700 pt-1 mt-1">
             <div className="px-3 py-1 font-medium text-xs text-gray-500 dark:text-gray-400">จัดการระบบ</div>
             <Link
-              href="/admin/orders"
+              href="/admin/orders-manage"
               className={`block px-3 py-1.5 rounded-md text-sm font-medium ${
-                isActive('/admin/orders') 
+                isActive('/admin/orders-manage') 
                   ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300' 
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 pl-6'
               }`}

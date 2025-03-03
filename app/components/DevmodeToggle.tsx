@@ -1,4 +1,3 @@
-// app/user/order-summary/[id]/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -31,6 +30,7 @@ interface OrderData {
   table: string;
   buffetType: string;
   totalCustomerCount: number;
+  Users_userID: number;
 }
 
 export default function OrderSummaryPage() {
@@ -70,15 +70,12 @@ export default function OrderSummaryPage() {
     }
   };
 
+  // โหลดข้อมูลเมื่อเข้าสู่หน้า
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([fetchOrderData(), fetchOrderItems()]);
       setLoading(false);
-    };
-
-    if (orderId) {
-      loadData();
       
       // ตั้งค่าให้รีเฟรชข้อมูลทุก 30 วินาที
       const interval = window.setInterval(() => {
@@ -86,8 +83,13 @@ export default function OrderSummaryPage() {
       }, 30000);
       
       setRefreshInterval(interval);
+    };
+
+    if (orderId) {
+      loadData();
     }
 
+    // Cleanup function
     return () => {
       if (refreshInterval) {
         clearInterval(refreshInterval);

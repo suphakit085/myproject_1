@@ -1,3 +1,4 @@
+// app/user/menu/[id]/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -83,25 +84,45 @@ export default function MenuOrderPage() {
     const fetchOrderData = async () => {
       try {
         const response = await fetch(`/api/orders/${orderId}`);
+        
+        // เพิ่มการตรวจสอบสถานะ 403
+        if (response.status === 403) {
+          const errorData = await response.json();
+          setError(errorData.message || 'ออเดอร์นี้ไม่สามารถใช้งานได้');
+          setOrderData(null);
+          return;
+        }
+  
         if (!response.ok) throw new Error(`Error: ${response.status}`);
+        
         const data: OrderData = await response.json();
         console.log('Fetched orderData:', data);
-        setOrderData(data);
-        if (data.orderStatus === 'CANCELLED') {
-          setError('ออเดอร์นี้ถูกยกเลิกแล้ว ไม่สามารถสั่งอาหารได้');
+  
+        // เพิ่มการตรวจสอบสถานะก่อนอนุญาตให้ใช้งาน
+        if (data.orderStatus === 'COMPLETED' || data.orderStatus === 'CANCELLED') {
+          setError(
+            data.orderStatus === 'COMPLETED' 
+              ? 'ออเดอร์นี้ได้ถูกปิดแล้ว ไม่สามารถสั่งอาหารได้' 
+              : 'ออเดอร์นี้ถูกยกเลิก ไม่สามารถสั่งอาหารได้'
+          );
+          setOrderData(null);
+          return;
         }
+  
+        setOrderData(data);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'ไม่สามารถดึงข้อมูลออเดอร์ได้');
+        const errorMessage = err instanceof Error 
+          ? err.message 
+          : 'ไม่สามารถดึงข้อมูลออเดอร์ได้';
+        
+        setError(errorMessage);
         console.error('เกิดข้อผิดพลาดในการดึงข้อมูลออเดอร์:', err);
+      } finally {
+        setLoading(false);
       }
     };
-
-    const loadData = async () => {
-      await fetchOrderData();
-      setLoading(false);
-    };
-
-    if (orderId) loadData();
+  
+    if (orderId) fetchOrderData();
   }, [orderId]);
 
   useEffect(() => {

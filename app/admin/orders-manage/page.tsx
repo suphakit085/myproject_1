@@ -1,4 +1,3 @@
-// app/admin/orders/page.tsx
 "use client";
 import Navbar from '@/app/components/Navbar';
 import React, { useState, useEffect } from 'react';
@@ -100,10 +99,10 @@ const AdminOrderPage: React.FC = () => {
         )
       );
       
-      showNotification('success', 'Order has been archived successfully!');
+      showNotification('success', 'จัดเก็บออร์เดอร์สำเร็จแล้ว!');
     } catch (err) {
       console.error("Failed to archive order:", err);
-      showNotification('error', 'Failed to archive order');
+      showNotification('error', 'ไม่สามารถจัดเก็บออร์เดอร์ได้');
     }
   };
 
@@ -117,6 +116,13 @@ const AdminOrderPage: React.FC = () => {
         body: JSON.stringify({ isDeleted: false }),
       });
 
+      // ตรวจสอบข้อผิดพลาดเฉพาะ
+      if (response.status === 400) {
+        const errorData = await response.json();
+        showNotification('error', errorData.error || 'ไม่สามารถคืนสถานะออร์เดอร์ได้: โต๊ะไม่ว่าง');
+        return;
+      }
+
       if (!response.ok) {
         throw new Error('Failed to restore order');
       }
@@ -127,13 +133,12 @@ const AdminOrderPage: React.FC = () => {
         )
       );
       
-      showNotification('success', 'Order has been restored successfully!');
+      showNotification('success', 'คืนสถานะออร์เดอร์สำเร็จแล้ว!');
     } catch (err) {
       console.error("Failed to restore order:", err);
-      showNotification('error', 'Failed to restore order');
+      showNotification('error', 'ไม่สามารถคืนสถานะออร์เดอร์ได้');
     }
   };
-
   // แสดง notification สวยงาม
   const showNotification = (type: 'success' | 'error', message: string) => {
     const notification = document.createElement('div');
@@ -260,28 +265,44 @@ const AdminOrderPage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {order.buffetType?.buffetTypesName || 'N/A'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex">
                         {showDeleted ? (
-                          <button
-                            onClick={() => handleRestoreOrder(order.orderID)}
-                            className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 flex items-center"
-                          >
-                            <span className="mr-1">↩</span> Restore
-                          </button>
+                          <>
+                            <Link href={`/order/${order.orderID}`}>
+                              <button
+                                className="bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 flex items-center"
+                              >
+                                <span className="mr-1">🔍</span> ดูข้อมูล
+                              </button>
+                            </Link>
+                            <button
+                              onClick={() => handleRestoreOrder(order.orderID)}
+                              className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-md text-sm transition-colors flex items-center"
+                            >
+                              <span className="mr-1">↩</span> คืนสถานะ
+                            </button>
+                          </>
                         ) : (
                           <>
+                            <Link href={`/order/${order.orderID}`}>
+                              <button
+                                className="bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 flex items-center"
+                              >
+                                <span className="mr-1">🔍</span> ดูข้อมูล
+                              </button>
+                            </Link>
                             <button
                               onClick={() => handleUpdateStatus(order.orderID, 'COMPLETED')}
-                              className="bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                               disabled={order.orderStatus === 'COMPLETED'}
                             >
-                              Complete
+                              <span className="mr-1">✓</span> เสร็จสิ้น
                             </button>
                             <button
                               onClick={() => handleSoftDeleteOrder(order.orderID)}
-                              className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md text-sm transition-colors"
+                              className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md text-sm transition-colors flex items-center"
                             >
-                              Archive
+                              <span className="mr-1">🗑️</span> จัดเก็บ
                             </button>
                           </>
                         )}

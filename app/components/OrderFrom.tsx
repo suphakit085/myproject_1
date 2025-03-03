@@ -1,3 +1,4 @@
+// app/components/OrderFrom.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
@@ -384,7 +385,7 @@ const OrderForm: React.FC = () => {
                                                     value={table.tabID}
                                                     disabled={reservedTableIds.includes(table.tabID)}
                                                 >
-                                                    {table.tabTypes === 'vip' ? '🌟 VIP' : '📌 Standard'} - โต๊ะ {table.tabID}
+                                                  {table.tabTypes.toLowerCase() === 'vip' ? '🌟 VIP' : '📌 Standard'} - โต๊ะ {table.tabID}
                                                     {reservedTableIds.includes(table.tabID) && " (จองแล้ว)"}
                                                 </option>
                                             ))}

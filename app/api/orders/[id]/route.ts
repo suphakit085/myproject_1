@@ -24,6 +24,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   try {
     let order;
     const idTrimmed = id.toLowerCase().trim();
+
+    
     
     // ตรวจสอบว่าเป็น UUID หรือไม่ (ควรเป็น orderItemId)
     if (isUUID(idTrimmed) || isUUIDWithoutHyphens(idTrimmed)) {
