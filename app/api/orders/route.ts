@@ -51,6 +51,12 @@ export async function GET() {
             buffetTypesName: true, 
           },
         },
+        bill: {
+          select: {
+            billID: true,
+            billStatus: true,
+          },
+        },
       },
       orderBy: {
         orderID: 'desc',

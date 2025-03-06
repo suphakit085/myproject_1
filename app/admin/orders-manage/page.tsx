@@ -2,6 +2,7 @@
 import Navbar from '@/app/components/Navbar';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface Order {
   orderID: number;
@@ -20,32 +21,38 @@ interface Order {
     buffetTypesName: string;
   };
   orderCreatedAt: Date;
+  bill?: {
+    billID: number;
+    billStatus: string;
+  } | null;
 }
 
-const AdminOrderPage: React.FC = () => {
+export default function AdminOrderPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/orders"); // API สำหรับดึงข้อมูล Order ทั้งหมด
-        if (!response.ok) {
-          throw new Error('Failed to fetch order');
-        }
-        const data = await response.json();
-        setOrders(data);
-      } catch (err) {
-        setError('Failed to fetch orders');
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/orders?includeBill=true"); // เพิ่มพารามิเตอร์เพื่อระบุว่าต้องการ include bill
+      if (!response.ok) {
+        throw new Error('Failed to fetch orders');
       }
-    };
+      const data = await response.json();
+      console.log("Orders with bills:", data); // ดู log ว่ามีข้อมูล bill หรือไม่
+      setOrders(data);
+    } catch (err) {
+      setError('Failed to fetch orders');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchOrders();
   }, []);
 
@@ -53,9 +60,7 @@ const AdminOrderPage: React.FC = () => {
     try {
       const response = await fetch(`/api/orders/${orderId}/update-status`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderStatus: newStatus }),
       });
 
@@ -63,13 +68,8 @@ const AdminOrderPage: React.FC = () => {
         throw new Error('Failed to update order status');
       }
 
-      setOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.orderID === orderId ? { ...order, orderStatus: newStatus } : order
-        )
-      );
-      
-      // แสดง notification แบบสวยงาม
+      // Refetch orders to reflect the latest state
+      await fetchOrders();
       showNotification('success', 'Order status updated successfully!');
     } catch (err) {
       console.error("Failed to update order status:", err);
@@ -79,12 +79,9 @@ const AdminOrderPage: React.FC = () => {
 
   const handleSoftDeleteOrder = async (orderId: number) => {
     try {
-      // เปลี่ยนจาก hard delete เป็น soft delete โดยส่ง isDeleted: true
       const response = await fetch(`/api/orders/${orderId}/soft-delete`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isDeleted: true }),
       });
 
@@ -92,13 +89,8 @@ const AdminOrderPage: React.FC = () => {
         throw new Error('Failed to soft delete order');
       }
 
-      // อัปเดตสถานะ isDeleted ใน state แทนที่จะลบออกจาก array
-      setOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.orderID === orderId ? { ...order, isDeleted: true } : order
-        )
-      );
-      
+      // Refetch orders to reflect the latest state
+      await fetchOrders();
       showNotification('success', 'จัดเก็บออร์เดอร์สำเร็จแล้ว!');
     } catch (err) {
       console.error("Failed to archive order:", err);
@@ -110,13 +102,10 @@ const AdminOrderPage: React.FC = () => {
     try {
       const response = await fetch(`/api/orders/${orderId}/restore`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isDeleted: false }),
       });
 
-      // ตรวจสอบข้อผิดพลาดเฉพาะ
       if (response.status === 400) {
         const errorData = await response.json();
         showNotification('error', errorData.error || 'ไม่สามารถคืนสถานะออร์เดอร์ได้: โต๊ะไม่ว่าง');
@@ -127,26 +116,21 @@ const AdminOrderPage: React.FC = () => {
         throw new Error('Failed to restore order');
       }
 
-      setOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.orderID === orderId ? { ...order, isDeleted: false } : order
-        )
-      );
-      
+      // Refetch orders to reflect the latest state
+      await fetchOrders();
       showNotification('success', 'คืนสถานะออร์เดอร์สำเร็จแล้ว!');
     } catch (err) {
       console.error("Failed to restore order:", err);
       showNotification('error', 'ไม่สามารถคืนสถานะออร์เดอร์ได้');
     }
   };
-  // แสดง notification สวยงาม
+
   const showNotification = (type: 'success' | 'error', message: string) => {
     const notification = document.createElement('div');
     notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg text-white ${
       type === 'success' ? 'bg-green-500' : 'bg-red-500'
     } transition-opacity duration-500 flex items-center`;
     
-    // Add icon based on type
     const icon = document.createElement('span');
     icon.className = 'mr-2 text-xl';
     icon.innerHTML = type === 'success' ? '✓' : '✗';
@@ -158,7 +142,6 @@ const AdminOrderPage: React.FC = () => {
     
     document.body.appendChild(notification);
     
-    // Fade out and remove after 3 seconds
     setTimeout(() => {
       notification.style.opacity = '0';
       setTimeout(() => {
@@ -184,7 +167,6 @@ const AdminOrderPage: React.FC = () => {
     );
   }
 
-  // กรองออเดอร์ตามสถานะการลบ
   const filteredOrders = showDeleted 
     ? orders.filter(order => order.isDeleted) 
     : orders.filter(order => !order.isDeleted);
@@ -192,10 +174,7 @@ const AdminOrderPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
-      {/* เพิ่มพื้นที่ว่างด้านบนเพิ่มเติมเพื่อไม่ให้เนื้อหาซ้อนทับกับ navbar */}
       <div className="h-8"></div>
-      
       <div className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <div className="flex justify-between items-center mb-6">
@@ -240,6 +219,7 @@ const AdminOrderPage: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table Type</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buffet Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bill Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -265,15 +245,25 @@ const AdminOrderPage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {order.buffetType?.buffetTypesName || 'N/A'}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                         {order.bill ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                 ชำระแล้ว
+                             </span>
+                            ) : (
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
+                                 ยังไม่ชำระ
+                                  </span>
+                                )}
+                              </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex">
                         {showDeleted ? (
                           <>
-                            <Link href={`/order/${order.orderID}`}>
-                              <button
-                                className="bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 flex items-center"
-                              >
-                                <span className="mr-1">🔍</span> ดูข้อมูล
-                              </button>
+                            <Link
+                              href={`/order/${order.orderID}`}
+                              className="bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 flex items-center"
+                            >
+                              <span className="mr-1">🔍</span> ดูข้อมูล
                             </Link>
                             <button
                               onClick={() => handleRestoreOrder(order.orderID)}
@@ -284,20 +274,28 @@ const AdminOrderPage: React.FC = () => {
                           </>
                         ) : (
                           <>
-                            <Link href={`/order/${order.orderID}`}>
-                              <button
-                                className="bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 flex items-center"
-                              >
-                                <span className="mr-1">🔍</span> ดูข้อมูล
-                              </button>
-                            </Link>
-                            <button
-                              onClick={() => handleUpdateStatus(order.orderID, 'COMPLETED')}
-                              className="bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                              disabled={order.orderStatus === 'COMPLETED'}
+                            <Link
+                              href={`/order/${order.orderID}`}
+                              className="bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 flex items-center"
                             >
-                              <span className="mr-1">✓</span> เสร็จสิ้น
-                            </button>
+                              <span className="mr-1">🔍</span> ดูข้อมูล
+                            </Link>
+                            {!order.bill && (
+                              <Link
+                                href={`/admin/checkout/${order.orderID}`}
+                                className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 flex items-center"
+                              >
+                                <span className="mr-1">💰</span> เช็คบิล
+                              </Link>
+                            )}
+                           {order.bill && (
+                    <Link
+                      href={`/admin/bill/${order.bill.billID}`}
+                       className="bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-md text-sm transition-colors mr-2 flex items-center"
+  >
+                          <span className="mr-1">🧾</span> ดูบิล
+                            </Link>
+                              )}
                             <button
                               onClick={() => handleSoftDeleteOrder(order.orderID)}
                               className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md text-sm transition-colors flex items-center"
@@ -317,6 +315,4 @@ const AdminOrderPage: React.FC = () => {
       </div>
     </div>
   );
-};
-
-export default AdminOrderPage;
+}
